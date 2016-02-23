@@ -2,7 +2,6 @@ package com.vb.translator;
 
 import android.content.ActivityNotFoundException;
 import android.content.Intent;
-import android.os.AsyncTask;
 import android.os.Bundle;
 import android.speech.RecognizerIntent;
 import android.speech.tts.TextToSpeech;
@@ -19,36 +18,17 @@ import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import org.json.JSONArray;
-import org.json.JSONObject;
-
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.net.HttpURLConnection;
-import java.net.URL;
 import java.util.ArrayList;
 import java.util.Locale;
 
 
-public class MainActivity extends AppCompatActivity implements View.OnClickListener {
+public class MainActivity extends AppCompatActivity implements View.OnClickListener, AsyncResponse {
     TextView textToTranslate;
     Button translate, say, speak;
     Spinner languages;
     TextView result;
-    String baseUrl = "https://translate.yandex.net/api/v1.5/tr.json/translate?";
-    final static String API_KEY = "trnsl.1.1.20160222T052905Z.1aba240c0f86103a.fb87ac03d43c739285c7d1106f81e901eec6d46c";
-    final static String key = "key=";
-    final static String text = "&text=";
-    final static String lang_param = "&lang=";
-    String url;
-    InputStream is = null;
-    String json = "";
-    JSONObject jObj = null;
     TextToSpeech sayIt;
     private final int REQ_CODE_SPEECH_INPUT = 100;
-
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -77,7 +57,9 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
         say = (Button) findViewById(R.id.say);
         say.setOnClickListener(this);
+
     }
+
 
     @Override
     protected void onStart() {
@@ -179,90 +161,21 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             sayIt.speak(result.getText().toString(), TextToSpeech.QUEUE_FLUSH, null);
         } else if (v.getId() == R.id.speechToText) {
             promptSpeechInput();
-        } else if (v.getId() == R.id.result) {
+        } else if (v.getId() == R.id.translate) {
 
             String[] param = new String[2];
             param[0] = textToTranslate.getText().toString();
             param[0] = param[0].replaceAll(" ", "%20");
             param[1] = (String) languages.getItemAtPosition(languages.getSelectedItemPosition());
-            new Translate().execute(param);
+            Translate translation = new Translate();
+            translation.response = this;
+            translation.execute(param);
         }
     }
 
-    class Translate extends AsyncTask<String, Void, JSONObject> {
-        HttpURLConnection urlConnection = null;
-        BufferedReader reader = null;
 
-        @Override
-        protected void onPreExecute() {
-            super.onPreExecute();
-        }
-
-        @Override
-        protected JSONObject doInBackground(String... params) {
-            try {
-                String lang = Locale.getDefault().getLanguage();
-                Log.v("lang", lang);
-                url = baseUrl + key + API_KEY + text + params[0] + lang_param + lang + "-" + params[1];
-
-                URL ur = new URL(url);
-
-                urlConnection = (HttpURLConnection) ur.openConnection();
-                urlConnection.setRequestMethod("GET");
-                urlConnection.connect();
-                is = urlConnection.getInputStream();
-
-                StringBuffer buffer = new StringBuffer();
-                if (is == null) {
-                    // Nothing to do.
-                    return null;
-                }
-                reader = new BufferedReader(new InputStreamReader(is));
-
-                String line;
-                while ((line = reader.readLine()) != null) {
-                    // Since it's JSON, adding a newline isn't necessary (it won't affect parsing)
-                    // But it does make debugging a *lot* easier if you print out the completed
-                    // buffer for debugging.
-                    buffer.append(line + "\n");
-                }
-
-                if (buffer.length() == 0) {
-                    // Stream was empty.  No point in parsing.
-                    return null;
-                }
-                json = buffer.toString();
-            } catch (Exception e) {
-                Log.v("reader", e.getMessage());
-            }
-            try {
-                jObj = new JSONObject(json);
-            } catch (Exception e) {
-                Log.v("tag", e.getMessage());
-            } finally {
-                if (urlConnection != null) {
-                    urlConnection.disconnect();
-                }
-                if (reader != null) {
-                    try {
-                        reader.close();
-                    } catch (final IOException e) {
-                        Log.e("error", "Error closing stream", e);
-                    }
-                }
-            }
-            return jObj;
-        }
-
-        @Override
-        protected void onPostExecute(JSONObject jsonObject) {
-            try {
-                JSONArray array = jsonObject.getJSONArray("text");
-                String res = array.getString(0);
-                result.setText(res);
-            } catch (Exception e) {
-                Log.v("post", e.getMessage());
-            }
-        }
+    @Override
+    public void processFinished(String result) {
+        this.result.setText(result);
     }
 }
