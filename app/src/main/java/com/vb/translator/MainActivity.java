@@ -32,20 +32,20 @@ import java.util.ArrayList;
 import java.util.Locale;
 
 
-public class MainActivity extends AppCompatActivity implements View.OnClickListener{
+public class MainActivity extends AppCompatActivity implements View.OnClickListener {
     TextView textToTranslate;
-    Button translate,say,speak;
+    Button translate, say, speak;
     Spinner languages;
     TextView result;
-    String baseUrl="https://translate.yandex.net/api/v1.5/tr.json/translate?";
-    final static String API_KEY="trnsl.1.1.20160222T052905Z.1aba240c0f86103a.fb87ac03d43c739285c7d1106f81e901eec6d46c";
-    final static String key="key=";
-    final static String text="&text=";
-    final static String lang_param="&lang=";
+    String baseUrl = "https://translate.yandex.net/api/v1.5/tr.json/translate?";
+    final static String API_KEY = "trnsl.1.1.20160222T052905Z.1aba240c0f86103a.fb87ac03d43c739285c7d1106f81e901eec6d46c";
+    final static String key = "key=";
+    final static String text = "&text=";
+    final static String lang_param = "&lang=";
     String url;
-    InputStream is=null;
-    String json="";
-    JSONObject jObj=null;
+    InputStream is = null;
+    String json = "";
+    JSONObject jObj = null;
     TextToSpeech sayIt;
     private final int REQ_CODE_SPEECH_INPUT = 100;
 
@@ -65,28 +65,18 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                         .setAction("Action", null).show();
             }
         });
-        textToTranslate=(TextView)findViewById(R.id.textToTranslate);
-        translate=(Button)findViewById(R.id.translate);
-        languages=(Spinner)findViewById(R.id.spin);
-        result=(TextView)findViewById(R.id.result);
+        textToTranslate = (TextView) findViewById(R.id.textToTranslate);
+        translate = (Button) findViewById(R.id.translate);
+        languages = (Spinner) findViewById(R.id.spin);
+
+        result = (TextView) findViewById(R.id.result);
         translate.setOnClickListener(this);
 
-        speak=(Button)findViewById(R.id.speechToText);
-        speak.setOnClickListener(new View.OnClickListener() {
+        speak = (Button) findViewById(R.id.speechToText);
+        speak.setOnClickListener(this);
 
-            @Override
-            public void onClick(View v) {
-                promptSpeechInput();
-            }
-        });
-
-        say=(Button)findViewById(R.id.say);
-        say.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                sayIt.speak(result.getText().toString(),TextToSpeech.QUEUE_FLUSH,null);
-            }
-        });
+        say = (Button) findViewById(R.id.say);
+        say.setOnClickListener(this);
     }
 
     @Override
@@ -97,7 +87,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
     @Override
     protected void onResume() {
-        sayIt=new TextToSpeech(getBaseContext(),new TextToSpeech.OnInitListener(){
+        sayIt = new TextToSpeech(getBaseContext(), new TextToSpeech.OnInitListener() {
             @Override
             public void onInit(int status) {
                 if (status == TextToSpeech.SUCCESS) {
@@ -110,7 +100,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
                     }
 
-                }else {
+                } else {
                     Log.e("TTS", "Initialisation Failed!");
                 }
             }
@@ -118,8 +108,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         super.onResume();
     }
 
-    public void onPause(){
-        if(sayIt !=null){
+    public void onPause() {
+        if (sayIt != null) {
             sayIt.stop();
             sayIt.shutdown();
         }
@@ -184,16 +174,25 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
     @Override
     public void onClick(View v) {
-        String [] param = new String[2];
-        param[0]=textToTranslate.getText().toString();
-        param[0]=param[0].replaceAll(" ","%20");
-        param[1]=(String)languages.getItemAtPosition(languages.getSelectedItemPosition());
-        new Translate().execute(param);
+
+        if (v.getId() == R.id.say) {
+            sayIt.speak(result.getText().toString(), TextToSpeech.QUEUE_FLUSH, null);
+        } else if (v.getId() == R.id.speechToText) {
+            promptSpeechInput();
+        } else if (v.getId() == R.id.result) {
+
+            String[] param = new String[2];
+            param[0] = textToTranslate.getText().toString();
+            param[0] = param[0].replaceAll(" ", "%20");
+            param[1] = (String) languages.getItemAtPosition(languages.getSelectedItemPosition());
+            new Translate().execute(param);
+        }
     }
 
-    class Translate extends AsyncTask<String,Void,JSONObject>{
-        HttpURLConnection urlConnection=null;
-        BufferedReader reader=null;
+    class Translate extends AsyncTask<String, Void, JSONObject> {
+        HttpURLConnection urlConnection = null;
+        BufferedReader reader = null;
+
         @Override
         protected void onPreExecute() {
             super.onPreExecute();
@@ -202,8 +201,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         @Override
         protected JSONObject doInBackground(String... params) {
             try {
-                String lang=Locale.getDefault().getLanguage();
-                Log.v("lang",lang);
+                String lang = Locale.getDefault().getLanguage();
+                Log.v("lang", lang);
                 url = baseUrl + key + API_KEY + text + params[0] + lang_param + lang + "-" + params[1];
 
                 URL ur = new URL(url);
@@ -232,16 +231,15 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                     // Stream was empty.  No point in parsing.
                     return null;
                 }
-                json=buffer.toString();
-            }catch (Exception e) {
-                Log.v("reader",e.getMessage());
+                json = buffer.toString();
+            } catch (Exception e) {
+                Log.v("reader", e.getMessage());
             }
             try {
                 jObj = new JSONObject(json);
-            }catch (Exception e){
-                Log.v("tag",e.getMessage());
-            }
-            finally {
+            } catch (Exception e) {
+                Log.v("tag", e.getMessage());
+            } finally {
                 if (urlConnection != null) {
                     urlConnection.disconnect();
                 }
@@ -259,11 +257,11 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         @Override
         protected void onPostExecute(JSONObject jsonObject) {
             try {
-                JSONArray array=jsonObject.getJSONArray("text");
-                String res=array.getString(0);
+                JSONArray array = jsonObject.getJSONArray("text");
+                String res = array.getString(0);
                 result.setText(res);
-            }catch (Exception e){
-                Log.v("post",e.getMessage());
+            } catch (Exception e) {
+                Log.v("post", e.getMessage());
             }
         }
     }
