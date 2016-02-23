@@ -1,7 +1,10 @@
 package com.vb.translator;
 
+import android.content.ActivityNotFoundException;
+import android.content.Intent;
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.speech.RecognizerIntent;
 import android.speech.tts.TextToSpeech;
 import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.Snackbar;
@@ -12,9 +15,9 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.Button;
-import android.widget.EditText;
 import android.widget.Spinner;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -25,12 +28,13 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.util.ArrayList;
 import java.util.Locale;
 
 
 public class MainActivity extends AppCompatActivity implements View.OnClickListener{
-    EditText textToTranslate;
-    Button translate,say;
+    TextView textToTranslate;
+    Button translate,say,speak;
     Spinner languages;
     TextView result;
     String baseUrl="https://translate.yandex.net/api/v1.5/tr.json/translate?";
@@ -39,7 +43,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     InputStream is=null;
     String json="";
     JSONObject jObj=null;
-    TextToSpeech sayit;
+    TextToSpeech sayIt;
+    private final int REQ_CODE_SPEECH_INPUT = 100;
 
 
     @Override
@@ -57,43 +62,99 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                         .setAction("Action", null).show();
             }
         });
-        textToTranslate=(EditText)findViewById(R.id.textToTranslate);
+        textToTranslate=(TextView)findViewById(R.id.textToTranslate);
         translate=(Button)findViewById(R.id.translate);
         languages=(Spinner)findViewById(R.id.spin);
         result=(TextView)findViewById(R.id.result);
         translate.setOnClickListener(this);
 
-        sayit=new TextToSpeech(getBaseContext(),new TextToSpeech.OnInitListener(){
+        speak=(Button)findViewById(R.id.speechToText);
+        speak.setOnClickListener(new View.OnClickListener() {
+
+            @Override
+            public void onClick(View v) {
+                promptSpeechInput();
+            }
+        });
+
+        say=(Button)findViewById(R.id.say);
+        say.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                sayIt.speak(result.getText().toString(),TextToSpeech.QUEUE_FLUSH,null);
+            }
+        });
+    }
+
+    @Override
+    protected void onStart() {
+        super.onStart();
+
+    }
+
+    @Override
+    protected void onResume() {
+        sayIt=new TextToSpeech(getBaseContext(),new TextToSpeech.OnInitListener(){
             @Override
             public void onInit(int status) {
                 if (status == TextToSpeech.SUCCESS) {
 
-                    int result = sayit.setLanguage(Locale.US);
+                    int result = sayIt.setLanguage(Locale.getDefault());
 
                     if (result == TextToSpeech.LANG_MISSING_DATA
                             || result == TextToSpeech.LANG_NOT_SUPPORTED) {
                         Log.e("TTS", "This Language is not supported");
 
                     }
+
                 }else {
-                    Log.e("TTS", "Initilization Failed!");
+                    Log.e("TTS", "Initialisation Failed!");
                 }
             }
         });
-        say=(Button)findViewById(R.id.say);
-        say.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                sayit.speak(result.getText().toString(),TextToSpeech.QUEUE_FLUSH,null);
-            }
-        });
+        super.onResume();
     }
+
     public void onPause(){
-        if(sayit !=null){
-            sayit.stop();
-            sayit.shutdown();
+        if(sayIt !=null){
+            sayIt.stop();
+            sayIt.shutdown();
         }
         super.onPause();
+    }
+
+    private void promptSpeechInput() {
+        Intent intent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
+        intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL,
+                RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
+        intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE, Locale.getDefault());
+        intent.putExtra(RecognizerIntent.EXTRA_PROMPT,
+                "Say anything");
+        try {
+            startActivityForResult(intent, REQ_CODE_SPEECH_INPUT);
+        } catch (ActivityNotFoundException a) {
+            Toast.makeText(getApplicationContext(),
+                    "Not supported !!",
+                    Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+
+        switch (requestCode) {
+            case REQ_CODE_SPEECH_INPUT: {
+                if (resultCode == RESULT_OK && null != data) {
+
+                    ArrayList<String> result = data
+                            .getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS);
+                    textToTranslate.setText(result.get(0));
+                }
+                break;
+            }
+
+        }
     }
 
     @Override
@@ -137,7 +198,9 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         @Override
         protected JSONObject doInBackground(String... params) {
             try {
-                url = baseUrl + "key=" + API_KEY + "&text=" + params[0] + "&lang=" + params[1];
+                String lang=Locale.getDefault().getLanguage();
+                Log.v("lang",lang);
+                url = baseUrl + "key=" + API_KEY + "&text=" + params[0] + "&lang=" + lang + "-" + params[1];
 
                 URL ur = new URL(url);
 
