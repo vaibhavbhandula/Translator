@@ -29,6 +29,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     TextView result;
     TextToSpeech sayIt;
     private final int REQ_CODE_SPEECH_INPUT = 100;
+    String [] param;
+    String textToSpeak="";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -57,10 +59,37 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
         say = (Button) findViewById(R.id.say);
         say.setOnClickListener(this);
+        textToTranslate.setVisibility(View.GONE);
+        speak.setVisibility(View.GONE);
+        say.setVisibility(View.GONE);
+        param=new String[2];
 
     }
 
 
+    void setUpTTS(){
+        sayIt = new TextToSpeech(getBaseContext(), new TextToSpeech.OnInitListener() {
+            @Override
+            public void onInit(int status) {
+                Log.e("tts","Inside INIT");
+                if (status == TextToSpeech.SUCCESS) {
+
+                    int result = sayIt.setLanguage(Locale.getDefault());
+
+                    Log.e("tts result",textToSpeak);
+                    if (result == TextToSpeech.LANG_MISSING_DATA
+                            || result == TextToSpeech.LANG_NOT_SUPPORTED) {
+                        Log.e("TTS", "This Language is not supported");
+
+                    }
+
+                    speakUp();
+                } else {
+                    Log.e("TTS", "Initialisation Failed!");
+                }
+            }
+        });
+    }
     @Override
     protected void onStart() {
         super.onStart();
@@ -69,24 +98,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
     @Override
     protected void onResume() {
-        sayIt = new TextToSpeech(getBaseContext(), new TextToSpeech.OnInitListener() {
-            @Override
-            public void onInit(int status) {
-                if (status == TextToSpeech.SUCCESS) {
-
-                    int result = sayIt.setLanguage(Locale.getDefault());
-
-                    if (result == TextToSpeech.LANG_MISSING_DATA
-                            || result == TextToSpeech.LANG_NOT_SUPPORTED) {
-                        Log.e("TTS", "This Language is not supported");
-
-                    }
-
-                } else {
-                    Log.e("TTS", "Initialisation Failed!");
-                }
-            }
-        });
+        setUpTTS();
         super.onResume();
     }
 
@@ -124,7 +136,13 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
                     ArrayList<String> result = data
                             .getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS);
-                    textToTranslate.setText(result.get(0));
+                    //textToTranslate.setText(result.get(0));
+                    param[0]=result.get(0);
+                    param[0] = param[0].replaceAll(" ", "%20");
+                    param[1] = (String) languages.getItemAtPosition(languages.getSelectedItemPosition());
+                    Translate translation = new Translate();
+                    translation.response = this;
+                    translation.execute(param);
                 }
                 break;
             }
@@ -157,25 +175,34 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     @Override
     public void onClick(View v) {
 
-        if (v.getId() == R.id.say) {
-            sayIt.speak(result.getText().toString(), TextToSpeech.QUEUE_FLUSH, null);
-        } else if (v.getId() == R.id.speechToText) {
+//        if (v.getId() == R.id.say) {
+//            sayIt.speak(result.getText().toString(), TextToSpeech.QUEUE_FLUSH, null);
+//        } else if (v.getId() == R.id.speechToText) {
+//            promptSpeechInput();
+//        } else if (v.getId() == R.id.translate) {
             promptSpeechInput();
-        } else if (v.getId() == R.id.translate) {
 
-            String[] param = new String[2];
-            param[0] = textToTranslate.getText().toString();
-            param[0] = param[0].replaceAll(" ", "%20");
-            param[1] = (String) languages.getItemAtPosition(languages.getSelectedItemPosition());
-            Translate translation = new Translate();
-            translation.response = this;
-            translation.execute(param);
-        }
+
+            //String[] param = new String[2];
+            //param[0] = textToTranslate.getText().toString();
+//            param[0] = param[0].replaceAll(" ", "%20");
+//            param[1] = (String) languages.getItemAtPosition(languages.getSelectedItemPosition());
+//            Translate translation = new Translate();
+//            translation.response = this;
+//            translation.execute(param);
+        //}
     }
 
 
     @Override
     public void processFinished(String result) {
         this.result.setText(result);
+        textToSpeak=result;
+        this.result.setVisibility(View.GONE);
+        speakUp();
+    }
+
+    void speakUp(){
+        sayIt.speak(textToSpeak, TextToSpeech.QUEUE_FLUSH, null);
     }
 }
