@@ -39,6 +39,9 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     TextView result;
     String baseUrl="https://translate.yandex.net/api/v1.5/tr.json/translate?";
     final static String API_KEY="trnsl.1.1.20160222T052905Z.1aba240c0f86103a.fb87ac03d43c739285c7d1106f81e901eec6d46c";
+    final static String key="key=";
+    final static String text="&text=";
+    final static String lang_param="&lang=";
     String url;
     InputStream is=null;
     String json="";
@@ -129,12 +132,12 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
         intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE, Locale.getDefault());
         intent.putExtra(RecognizerIntent.EXTRA_PROMPT,
-                "Say anything");
+                getString(R.string.prompt));
         try {
             startActivityForResult(intent, REQ_CODE_SPEECH_INPUT);
         } catch (ActivityNotFoundException a) {
             Toast.makeText(getApplicationContext(),
-                    "Not supported !!",
+                    getString(R.string.not_support),
                     Toast.LENGTH_SHORT).show();
         }
     }
@@ -183,6 +186,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     public void onClick(View v) {
         String [] param = new String[2];
         param[0]=textToTranslate.getText().toString();
+        param[0]=param[0].replaceAll(" ","%20");
         param[1]=(String)languages.getItemAtPosition(languages.getSelectedItemPosition());
         new Translate().execute(param);
     }
@@ -200,7 +204,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             try {
                 String lang=Locale.getDefault().getLanguage();
                 Log.v("lang",lang);
-                url = baseUrl + "key=" + API_KEY + "&text=" + params[0] + "&lang=" + lang + "-" + params[1];
+                url = baseUrl + key + API_KEY + text + params[0] + lang_param + lang + "-" + params[1];
 
                 URL ur = new URL(url);
 

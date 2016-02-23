@@ -67,4 +67,10 @@
         <item>Estonian</item>
         <item>Japanese</item>
     </string-array>
+    <string name="speak">Speak</string>
+    <string name="lang">Languages</string>
+    <string name="translate">Translate</string>
+    <string name="sayIt">SAY IT!</string>
+    <string name="not_support">Not supported !!</string>
+    <string name="prompt">Speak Up</string>
 </resources>
